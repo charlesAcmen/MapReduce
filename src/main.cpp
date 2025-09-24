@@ -34,7 +34,5 @@ int main() {
         });
     }
     for (auto &t : workers) t.join();
-
-    // std::cout << "All tasks done!\n";
     spdlog::info("All tasks done!");
 }
