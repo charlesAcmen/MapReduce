@@ -31,6 +31,7 @@ class Coordinator {
 
         int getNReduce() const { return nReduce; }
 
+        void run();
     private:
         std::vector<Task> mapTasks;
         std::vector<Task> reduceTasks;

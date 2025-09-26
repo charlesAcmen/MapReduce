@@ -65,3 +65,7 @@ bool Coordinator::done() {
     }
     return true;
 }
+
+void Coordinator::run() {
+    rpcServer.start();
+}
