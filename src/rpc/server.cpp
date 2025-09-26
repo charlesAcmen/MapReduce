@@ -42,11 +42,13 @@ void RpcServer::start() {
     //strcpy is unsafe, use strncpy instead
     //sun_path:socket file path
     //sock_path.c_str():convert std::string to const char*
-    strncpy(addr.sun_path, sock_path.c_str(), sizeof(addr.sun_path) - 1);
+    std::strncpy(addr.sun_path, sock_path.c_str(), sizeof(addr.sun_path) - 1);
+    //ensure null-termination
+    addr.sun_path[sizeof(addr.sun_path)-1] = '\0';
     //cpy will copy until '\0',but sun_path is not guaranteed to be null-terminated
     // strcpy(addr.sun_path, sock_path.c_str());
     //delete existing socket file,or Address already in use error
-    unlink(sock_path.c_str()); 
+    ::unlink(sock_path.c_str()); 
 
     //bind() will create the socket file at sock_path automatically
     if (bind(server_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
