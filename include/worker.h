@@ -1,7 +1,7 @@
 #pragma once
 #include "mapreduce.h"
 #include "coordinator.h"
-
+#include "rpc/client.h"
 class Worker {
     public:
         Worker(Coordinator &coord, MapFunc mapf, ReduceFunc reducef);
@@ -11,6 +11,7 @@ class Worker {
         Coordinator &coord;
         MapFunc mapf;
         ReduceFunc reducef;
+        RpcClient rpcClient;
 
         void doMap(const Task &task);
         void doReduce(const Task &task);

@@ -8,7 +8,7 @@
 namespace fs = std::filesystem;
 
 Worker::Worker(Coordinator &coord, MapFunc mapf, ReduceFunc reducef)
-    : coord(coord), mapf(mapf), reducef(reducef) {}
+    : coord(coord), mapf(mapf), reducef(reducef),rpcClient("127.0.0.1",12345){}
 
 void Worker::run() {
     //while true?thread pool?

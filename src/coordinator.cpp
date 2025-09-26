@@ -1,7 +1,7 @@
 #include "coordinator.h"
 
 Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce) 
-    : nReduce(nReduce) {
+    : nReduce(nReduce),rpcServer(12345){
     for (int i = 0; i < (int)files.size(); i++) {
         mapTasks.push_back({TaskType::Map, i, files[i], TaskState::Idle});
     }

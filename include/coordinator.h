@@ -4,7 +4,7 @@
 #include <vector>
 #include <mutex>
 #include <condition_variable>
-
+#include "rpc/server.h"
 enum class TaskState { Idle, InProgress, Completed };
 enum class TaskType { Map, Reduce, None };
 
@@ -36,4 +36,5 @@ class Coordinator {
         std::vector<Task> reduceTasks;
         int nReduce;
         std::mutex mtx;
+        RpcServer rpcServer;
 };
