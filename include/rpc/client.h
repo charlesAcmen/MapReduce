@@ -8,11 +8,11 @@ RPC message format is defined as:
 */
 
 
-struct RpcRequest {
-    //method name in string type:key in handlers(unordered_map)
-    std::string method;
-    std::string payload;
-};
+// struct RpcRequest {
+//     //method name in string type:key in handlers(unordered_map)
+//     std::string method;
+//     std::string payload;
+// };
 
 
 // 客户端 RPC

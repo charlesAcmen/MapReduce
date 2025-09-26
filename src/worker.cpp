@@ -4,6 +4,11 @@
 #include <map>
 #include <filesystem>
 #include <iostream>
+//line used:line 27
+#include <spdlog/spdlog.h>
+//line used:line 21
+#include "rpc/delimiter_codec.h"
+
 
 namespace fs = std::filesystem;
 
@@ -11,26 +16,40 @@ Worker::Worker( MapFunc mapf, ReduceFunc reducef)
     :  mapf(mapf), reducef(reducef),rpcClient(){}
 
 void Worker::run() {
-    //while true?thread pool?
     while (true) {
         Task task{TaskType::None, -1, "", TaskState::Idle};
-        std::string s = rpcClient.call("Coordinator.GetTask", ""));
-        if () {
-            // No task available
-            if (coord.done()) 
-                // All tasks are done
-                break;
-            // Wait and retry
+        std::string reply = rpcClient.call("RequestTask", "");
+        rpc::DelimiterCodec codec;
+        auto resp = codec.tryDecodeResponse(reply);
+        if(resp){
+            std::istringstream iss(*resp);
+            int typeInt, stateInt;
+            if (!(iss >> typeInt >> task.id >> task.filename >> stateInt)) {
+                spdlog::error("Failed to parse task from response: {}", *resp);
+                continue;
+            }
+            task.type = static_cast<TaskType>(typeInt);
+            task.state = static_cast<TaskState>(stateInt);
+            spdlog::info("Received task: type={}, id={}, filename={}, state={}",
+                         static_cast<int>(task.type), task.id, task.filename, static_cast<int>(task.state));
+        }else{
+            spdlog::error("Response not complete");
             continue;
         }
+
         if (task.type == TaskType::Map) {
             doMap(task);
             // Report map task completion
-            coord.reportDone(task.id, TaskType::Map);
+            rpcClient.call("ReportDone",std::to_string(task.id) + "\n" + "Map");
+            // coord.reportDone(task.id, TaskType::Map);
         } else if (task.type == TaskType::Reduce) {
             doReduce(task);
             // Report reduce task completion
-            coord.reportDone(task.id, TaskType::Reduce);
+            rpcClient.call("ReportDone", std::to_string(task.id) + "\n" + "Reduce");
+            // coord.reportDone(task.id, TaskType::Reduce);
+        }else {
+            // None or Idle：sleep to avoid busy loop
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
 }
@@ -44,7 +63,9 @@ void Worker::doMap(const Task &task) {
     //kvs: vector of <key, value> pairs
     auto kvs = mapf(task.filename, buffer.str());
 
-    int nReduce = coord.getNReduce();
+    // Get number of reduce tasks from coordinator
+    int nReduce = std::stoi(rpcClient.call("GetNReduce", ""));
+    // int nReduce = coord.getNReduce();
     // Open intermediate files for each reduce task
     std::vector<std::ofstream> outFiles(nReduce);
     for (int i = 0; i < nReduce; i++) {

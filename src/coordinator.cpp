@@ -1,13 +1,27 @@
 #include "coordinator.h"
 
 Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce) 
-    : nReduce(nReduce),rpcServer(12345){
+    : nReduce(nReduce),rpcServer(){
     for (int i = 0; i < (int)files.size(); i++) {
         mapTasks.push_back({TaskType::Map, i, files[i], TaskState::Idle});
     }
     for (int i = 0; i < nReduce; i++) {
         reduceTasks.push_back({TaskType::Reduce, i, "", TaskState::Idle});
     }
+    rpcServer.register_handler("RequestTask", 
+        [this](const std::string &payload) {
+            Task task{TaskType::None, -1, "", TaskState::Idle};
+            if (this->getTask(task)) {
+                //serialize task to string
+                std::string s = std::to_string(static_cast<int>(task.type)) + "\n" +
+                                std::to_string(task.id) + "\n" +
+                                task.filename + "\n" +
+                                std::to_string(static_cast<int>(task.state));
+                return s;
+            } else {
+                return std::string("NoTask");
+            }
+        });
 }
 /*
 scheule map tasks first, then reduce tasks

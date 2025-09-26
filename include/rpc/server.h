@@ -9,13 +9,13 @@ RPC response format is defined as:
 [response payload]\nEND\n
 */
 
-struct RpcResponse {
-    std::string payload;
-};
+// struct RpcResponse {
+//     std::string payload;
+// };
 
 class RpcServer {
 public:
-    RpcServer(int port);
+    RpcServer(int port=12345);
     //register rpc handler by method name
     void register_handler(const std::string& method,
                           std::function<std::string(const std::string&)> handler);

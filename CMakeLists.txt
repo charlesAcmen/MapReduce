@@ -11,6 +11,7 @@ file(GLOB SOURCE_FILES
 )
 file(GLOB HEADER_FILES
     "include/*.h"
+    "include/rpc/*.h"
 )
 add_executable(map_reduce ${SOURCE_FILES} ${HEADER_FILES})
 target_include_directories(
