@@ -59,7 +59,7 @@ int main() {
     Coordinator coord(files, nReduce);
     ThreadPool pool(nReduce);
     pool.enqueue([&]{
-        Worker w(coord, wcMap, wcReduce);
+        Worker w(wcMap, wcReduce);
         w.run();
     });
     spdlog::info("All tasks done!");

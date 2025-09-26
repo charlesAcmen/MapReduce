@@ -4,11 +4,10 @@
 #include "rpc/client.h"
 class Worker {
     public:
-        Worker(Coordinator &coord, MapFunc mapf, ReduceFunc reducef);
+        Worker(MapFunc mapf, ReduceFunc reducef);
         void run();
 
     private:
-        Coordinator &coord;
         MapFunc mapf;
         ReduceFunc reducef;
         RpcClient rpcClient;

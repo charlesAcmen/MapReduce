@@ -7,14 +7,15 @@
 
 namespace fs = std::filesystem;
 
-Worker::Worker(Coordinator &coord, MapFunc mapf, ReduceFunc reducef)
-    : coord(coord), mapf(mapf), reducef(reducef),rpcClient("127.0.0.1",12345){}
+Worker::Worker( MapFunc mapf, ReduceFunc reducef)
+    :  mapf(mapf), reducef(reducef),rpcClient(){}
 
 void Worker::run() {
     //while true?thread pool?
     while (true) {
         Task task{TaskType::None, -1, "", TaskState::Idle};
-        if (!coord.getTask(task)) {
+        std::string s = rpcClient.call("Coordinator.GetTask", ""));
+        if () {
             // No task available
             if (coord.done()) 
                 // All tasks are done
