@@ -1,5 +1,8 @@
+#include <vector>
+#include <string>
+#include <cctype>// for std::isalpha
+#include "mapreduce.h"
 #include "worker.h"
-
 std::vector<std::string> splitWords(const std::string& text) {
     std::vector<std::string> words;
     std::string current;

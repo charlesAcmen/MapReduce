@@ -1,3 +1,5 @@
+#include <vector>
+#include <string>
 #include "coordinator.h"
 int main() {
     std::vector<std::string> files = 

@@ -1,7 +1,7 @@
 #pragma once
-#include "mapreduce.h"
-#include "coordinator.h"
-#include "rpc/client.h"
+#include "mapreduce.h"  // for MapFunc, ReduceFunc
+#include "coordinator.h" // for Task
+#include "rpc/client.h" // for RpcClient
 class Worker {
     public:
         Worker(MapFunc mapf, ReduceFunc reducef);
