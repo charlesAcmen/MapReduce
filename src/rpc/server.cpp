@@ -111,7 +111,7 @@ void RpcServer::start() {
 
                     // === call handler ===
                     std::string reply_payload;
-                    spdlog::info("Received RPC request: method='{}', payload='{}'", method, payload);
+                    // spdlog::info("Received RPC request: method='{}', payload='{}'", method, payload);
                     if (handlers.count(method)) {
                         reply_payload = handlers[method](payload);
                     } else {

@@ -16,9 +16,9 @@ void Worker::run() {
     while (true) {
         Task task{TaskType::None, -1, "", TaskState::Idle};
         std::string reply = rpcClient.call("RequestTask", "");
-        // spdlog::info("RPC reply: {}", reply);
         if (reply == "NoTask") {
             spdlog::info("No more tasks available, worker {} exiting...", getpid());
+            rpcClient.call("WorkerExit", "");
             break;
         }
 
@@ -52,8 +52,7 @@ void Worker::run() {
         }
 
         task.state = taskStateFromString(stateStr);
-        spdlog::info("Received task: type={}, id={}, filename={}, state={}",
-                    to_string(task.type), task.id, task.filename, to_string(task.state));
+        // spdlog::info("Received task: type={}, id={}, filename={}, state={}",to_string(task.type), task.id, task.filename, to_string(task.state));
 
         if (task.type == TaskType::Map) {
             doMap(task);
@@ -70,7 +69,6 @@ void Worker::run() {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
-    spdlog::info("Worker exited run loop.");
 }
 
 void Worker::doMap(const Task &task) {

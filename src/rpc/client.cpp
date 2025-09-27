@@ -63,7 +63,7 @@ std::string RpcClient::call(
 
     // 2. encode to framed message
     std::string framed = codec.encodeRequest(request_payload);
-    spdlog::info("RpcClient sending request: method='{}', payload='{}'", method, payload);
+    // spdlog::info("RpcClient sending request: method='{}', payload='{}'", method, payload);
     //3. send request
     //send parameters:connecting fd,buff,buff size,flag
     ssize_t n = send(sock_fd, framed.c_str(), framed.size(), 0);

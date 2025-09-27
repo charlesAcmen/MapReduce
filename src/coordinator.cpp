@@ -51,6 +51,13 @@ Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce)
         [this](const std::string &payload) -> std::string {
         return std::to_string(this->getNReduce());
     });
+
+    //4. WorkerExit
+    rpcServer.register_handler("WorkerExit",
+        [this](const std::string &payload) -> std::string {
+        spdlog::info("A worker is exiting.");
+        return "ok";
+    });
 }
 /*
 schedule map tasks first, then reduce tasks
@@ -69,12 +76,12 @@ bool Coordinator::getTask(Task &task) {
     bool allMapDone = true;
     for (auto &t : mapTasks) if (t.state != TaskState::Completed) allMapDone = false;
     if (allMapDone) {
-        spdlog::info("All map tasks completed, now assigning reduce tasks");
         //then assign reduce tasks
         for (auto &t : reduceTasks) {
             if (t.state == TaskState::Idle) {
                 t.state = TaskState::InProgress;
                 task = t;
+                spdlog::info("assigning reduce tasks");
                 return true;
             }
         }

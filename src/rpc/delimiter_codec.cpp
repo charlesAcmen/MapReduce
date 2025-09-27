@@ -35,7 +35,6 @@ namespace rpc {
         size_t pos = buffer.find(delim);
         // no complete message yet
         if (pos == std::string::npos){
-            spdlog::info("No complete RPC request message yet");
             return std::nullopt;
         }
         // found a delimiter, extract the message
