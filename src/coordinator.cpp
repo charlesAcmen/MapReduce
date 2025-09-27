@@ -2,8 +2,8 @@
 #include "delimiter_codec.h"
 #include <spdlog/spdlog.h>
 #include <sstream>
-Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce) 
-    : nReduce(nReduce),rpcServer(){
+Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce,int nWorkers) 
+    : nReduce(nReduce),activeWorkers(nWorkers),rpcServer(){
     for (int i = 0; i < (int)files.size(); i++) {
         mapTasks.push_back({TaskType::Map, i, files[i], TaskState::Idle});
     }
@@ -55,7 +55,15 @@ Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce)
     //4. WorkerExit
     rpcServer.register_handler("WorkerExit",
         [this](const std::string &payload) -> std::string {
-        spdlog::info("A worker is exiting.");
+        int left = --activeWorkers;
+        spdlog::info("A worker is exiting. Remaining workers: {}", left);
+
+        // 如果没有 worker 了，就可以关掉 server
+        if (left == 0) {
+            spdlog::info("All workers exited, shutting down RPC server...");
+            rpcServer.stop();  // 关闭监听 socket，让 accept() 返回
+        }
+
         return "ok";
     });
 }
@@ -105,4 +113,6 @@ bool Coordinator::done() {
 
 void Coordinator::run() {
     rpcServer.start();
+    //exit when closed server_fd socket and running flag is set to false
+    //only when all tasks are done close server_fd will be called
 }

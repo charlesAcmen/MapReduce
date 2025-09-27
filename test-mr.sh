@@ -30,15 +30,10 @@ done
 # -----------------------------
 # Step 4: 等待后台任务结束
 wait $COORD_PID   # 等待 coordinator 退出
-# 这里可以选择再 wait 其他 worker，或者 detach 模式下直接等待 coordinator
 
-# -----------------------------
-# Step 5: 合并 ./mr-out/ 文件并排序（和你之前的 C++ 做法一致）
 OUT_DIR=./mr-out
 FINAL_OUT=$OUT_DIR/mr-wc-all.txt
 
-# 清理旧文件
-rm -f "$FINAL_OUT"
 
 # -----------------------------
 # Step 6: 比较参考答案

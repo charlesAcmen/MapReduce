@@ -39,6 +39,8 @@ int main() {
         // all mr-out-* files
         if (filename.find("mr-out-") != 0) continue;
 
+        spdlog::info("filename: {}", filename);
+
         std::ifstream in(entry.path(), std::ios::binary);
         if (!in) {
             spdlog::error("Failed to open file: {}", entry.path().string());

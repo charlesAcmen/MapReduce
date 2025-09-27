@@ -28,7 +28,7 @@ void RpcServer::start() {
     //AF_UNIX:UNIX domain socket
     //SOCK_STREAM:stream socket
     //0:default protocol for AF_UNIX and SOCK_STREAM is 0
-    int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    this->server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if(server_fd < 0) {
         spdlog::error("Failed to create socket");
         return;
@@ -67,10 +67,15 @@ void RpcServer::start() {
     spdlog::info("RpcServer listening on {}", sock_path);
 
     //in loop to accept and handle connections
-    while (true) {
+    while (running) {
         //block until a new connection is accepted
         int client_fd = accept(server_fd, nullptr, nullptr);
         if(client_fd < 0) {
+            if(!running){
+                spdlog::info("running flag is false");
+                //server is stopping, exit loop
+                break;
+            }
             spdlog::error("Failed to accept connection");
             //continue to stay alive
             continue;
@@ -132,5 +137,23 @@ void RpcServer::start() {
             spdlog::info("Closed connection: fd={}", client_fd);
         // });
         }).detach();
+    }
+}
+
+void RpcServer::stop() {
+    spdlog::info("RpcServer stopping...");
+    running = false;
+    if (server_fd != -1) {
+        //close the server actively,to break the accept() blocking
+        //after that server will exit while loop and return 0,process exits normally
+        spdlog::info("Closing server socket...");
+        //parameter:int sockfd, int how
+        //how: SHUT_RD, SHUT_WR, SHUT_RDWR
+        //SHUT_RDWR:disables further send and receive operations
+        ::shutdown(server_fd, SHUT_RDWR);
+        //decrease reference count of the socket
+        ::close(server_fd);
+        
+        server_fd = -1;
     }
 }
