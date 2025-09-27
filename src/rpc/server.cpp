@@ -7,8 +7,8 @@
 #include <iostream>
 #include <sstream>
 #include <spdlog/spdlog.h>
-RpcServer::RpcServer(int port) : port(port),pool(1){
-}
+#include "rpc/delimiter_codec.h"
+RpcServer::RpcServer(int port) : port(port),pool(1){}
 void RpcServer::register_handler(
     const std::string& method,
     std::function<std::string(const std::string&)> handler) {
@@ -76,6 +76,7 @@ void RpcServer::start() {
         }
         spdlog::info("Accepted new connection: fd={}", client_fd);
         pool.enqueue([this, client_fd]() {
+            rpc::DelimiterCodec codec;
             char buf[4096];
             std::string data;
             //ssize_t: signed size type
@@ -96,41 +97,29 @@ void RpcServer::start() {
             }
             data.append(buf, n);
 
-            //now data should conform to the rpc message format defined in client.h
+            //now data should conform to the rpc message format defined in task.h
             //[methodName]\n[payload]\nEND\n
             //there could be multiple rpc messages in data
-            // 按 END\n 分割
-            size_t pos;
-            while ((pos = data.find("\nEND\n")) != std::string::npos) {
-                //pos is at the beginning of "\nEND\n"
-                std::string msg = data.substr(0, pos);
-                //meg:[methodName]\n[payload]'\0'
-                //forward a length of pos + 5 to consume this message from data 
-                data.erase(0, pos + 5);
+            auto req_opt = codec.tryDecodeRequest(data);
+            //req_opt is std::optional<RpcRequest>
+            while (req_opt) {
+                const auto& [method, payload] = *req_opt;
 
-                // resolve methodName + payload
-                std::istringstream iss(msg);
-                std::string method;
-                //method is the first line separated by '\n'
-                std::getline(iss, method);
-                std::string payload;
-                //payload is the rest of the message until '\0'
-                //from c++ 11 onwards,string data will be null-terminated
-                //getline will stop at '\n' by default,so specify '\0' as the delimiter
-                //and it may stop at the end of the stream if there is no '\0'
-                std::getline(iss, payload, '\0');
-
-                // call handler by method name
-                std::string reply;
+                // === call handler ===
+                std::string reply_payload;
+                spdlog::info("Received RPC request: method='{}', payload='{}'", method, payload);
                 if (handlers.count(method)) {
-                    reply = handlers[method](payload);
+                    reply_payload = handlers[method](payload);
                 } else {
-                    reply = "ERROR: unknown method";
+                    reply_payload = "ERROR: unknown method";
                 }
 
-                reply += "\nEND\n";
-                //send parameters: socket fd, buffer, buffer size, flags
-                send(client_fd, reply.c_str(), reply.size(), 0);
+                // === encode response ===
+                std::string framed = codec.encodeResponse(reply_payload);
+                ::send(client_fd, framed.data(), framed.size(), 0);
+
+                // update opt
+                req_opt = codec.tryDecodeRequest(data);
             }
             close(client_fd);
         });

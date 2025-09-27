@@ -6,6 +6,7 @@
 #include <cstring>
 #include <sys/un.h>
 #include <spdlog/spdlog.h>
+#include "rpc/delimiter_codec.h"
 RpcClient::RpcClient(const std::string& host, int port)
     : host(host), port(port),pool(1){
     // create socket used to connect to server
@@ -55,11 +56,17 @@ RpcClient::~RpcClient(){
 std::string RpcClient::call(
     const std::string& method, 
     const std::string& payload){
-    //construct request message that confroms to request format
-    std::string request = method + "\n" + payload + "\nEND\n";
+    rpc::DelimiterCodec codec;
 
+    // 1. constuct request payload
+    const std::string request_payload = method + "\n" + payload;
+
+    // 2. encode to framed message
+    std::string framed = codec.encodeRequest(request_payload);
+    spdlog::info("RpcClient sending request: method='{}', payload='{}'", method, payload);
+    //3. send request
     //send parameters:connecting fd,buff,buff size,flag
-    ssize_t n = send(sock_fd, request.c_str(), request.size(), 0);
+    ssize_t n = send(sock_fd, framed.c_str(), framed.size(), 0);
     if (n < 0) {
         throw std::runtime_error("RpcClient::call send() failed");
     }
@@ -78,11 +85,10 @@ std::string RpcClient::call(
         }
         buffer.append(tmp, r);
 
-        //find the END marker
-        size_t pos = buffer.find("\nEND\n");
-        if (pos != std::string::npos) {
-            //peel off the END marker and return the response payload
-            return buffer.substr(0, pos); 
+        // try decode
+        auto resp = codec.tryDecodeResponse(buffer);
+        if (resp) {
+            return *resp; // return response payload
         }
     }
 

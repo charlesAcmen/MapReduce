@@ -16,18 +16,18 @@ void Worker::run() {
     while (true) {
         Task task{TaskType::None, -1, "", TaskState::Idle};
         std::string reply = rpcClient.call("RequestTask", "");
-        spdlog::info("RPC reply: {}", reply);
+        // spdlog::info("RPC reply: {}", reply);
     
         std::istringstream iss(reply);
-        int typeInt, stateInt;
-        if (!(iss >> typeInt >> task.id >> task.filename >> stateInt)) {
+        std::string typeStr, stateStr;
+        if (!(iss >> typeStr >> task.id >> task.filename >> stateStr)) {
             spdlog::error("Failed to parse task from response: {}", reply);
             continue;
         }
-        task.type = static_cast<TaskType>(typeInt);
-        task.state = static_cast<TaskState>(stateInt);
+        task.type = taskTypeFromString(typeStr);
+        task.state = taskStateFromString(stateStr);
         spdlog::info("Received task: type={}, id={}, filename={}, state={}",
-                        static_cast<int>(task.type), task.id, task.filename, static_cast<int>(task.state));
+                        to_string(task.type), task.id, task.filename, to_string(task.state));
 
         if (task.type == TaskType::Map) {
             doMap(task);

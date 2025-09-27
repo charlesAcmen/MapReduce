@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <stdexcept>
 enum class TaskState { Idle, InProgress, Completed };
 enum class TaskType { Map, Reduce, None };
 
@@ -21,6 +22,19 @@ inline std::string to_string(TaskState state) {
     return "UNKNOWN";
 }
 
+inline TaskType taskTypeFromString(const std::string& s) {
+    if (s == "Map") return TaskType::Map;
+    if (s == "Reduce") return TaskType::Reduce;
+    if (s == "None") return TaskType::None;
+    throw std::invalid_argument("Unknown TaskType string: " + s);
+}
+
+inline TaskState taskStateFromString(const std::string& s) {
+    if (s == "Idle") return TaskState::Idle;
+    if (s == "InProgress") return TaskState::InProgress;
+    if (s == "Completed") return TaskState::Completed;
+    throw std::invalid_argument("Unknown TaskState string: " + s);
+}
 
 
 struct Task {

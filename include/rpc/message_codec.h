@@ -25,7 +25,8 @@ namespace rpc {
 
             //encode a rpcrequest structor that contains method name and payload to a string(framing)
             virtual std::string encodeRequest(const RpcRequest& req) = 0;
-
+            //encode a payload string to a string(framing)
+            virtual std::string encodeRequest(const std::string& payload) = 0;
             //try to decode a request from buffer front
             //if successful, return RpcRequest and remove consumed data from buffer
             //if not, leave buffer untouched and return std::nullopt

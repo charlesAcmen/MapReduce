@@ -1,5 +1,7 @@
 #include "coordinator.h"
 #include "delimiter_codec.h"
+#include <spdlog/spdlog.h>
+#include <sstream>
 Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce) 
     : nReduce(nReduce),rpcServer(){
     for (int i = 0; i < (int)files.size(); i++) {
@@ -8,8 +10,10 @@ Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce)
     for (int i = 0; i < nReduce; i++) {
         reduceTasks.push_back({TaskType::Reduce, i, "", TaskState::Idle});
     }
+    //register rpc handlers
+    //1. RequestTask
     rpcServer.register_handler("RequestTask", 
-        [this](const std::string &payload) {
+        [this](const std::string &payload) -> std::string{
             Task task{TaskType::None, -1, "", TaskState::Idle};
             if (this->getTask(task)) {
                 //serialize task to string
@@ -23,8 +27,29 @@ Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce)
                 return std::string("NoTask");
             }
         });
+    //2. ReportDone
     rpcServer.register_handler("ReportDone",
-        [this](const std::string &payload) {return "ok";});
+        [this](const std::string &payload) -> std::string{
+            //parse payload: taskId(int)\ntaskType(string)
+            std::istringstream iss(payload);
+            int taskId;
+            std::string typeStr;
+
+            if (!(iss >> taskId >> typeStr)) {
+                spdlog::error("ReportDone: failed to parse payload: {}", payload);
+                return "error";
+            }
+
+            
+            TaskType type = taskTypeFromString(typeStr); 
+            this->reportDone(taskId, type);
+            return "ok";
+        });
+    //3. GetNReduce
+    rpcServer.register_handler("GetNReduce", 
+        [this](const std::string &payload) -> std::string {
+        return std::to_string(this->getNReduce());
+    });
 }
 /*
 schedule map tasks first, then reduce tasks

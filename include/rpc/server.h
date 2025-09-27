@@ -19,7 +19,7 @@ public:
 private:
     //server port
     int port;
-    //return type : std::string, param type: const std::string&
+    //return type : std::string, param type: const std::string& as payload
     std::unordered_map<std::string, std::function<std::string(const std::string&)>> handlers;
 
     ThreadPool pool;

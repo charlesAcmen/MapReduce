@@ -17,6 +17,15 @@ namespace rpc {
         out += delim;
         return out;
     }
+    std::string DelimiterCodec::encodeRequest(const std::string& payload){
+        
+        std::string out;
+        //'\n' is 1 byte
+        out.reserve(payload.size() + delim.size() + 1);
+        out += payload;
+        out += delim;
+        return out;
+    }
 
     std::optional<RpcRequest> DelimiterCodec::tryDecodeRequest(std::string& buffer){
         size_t pos = buffer.find(delim);

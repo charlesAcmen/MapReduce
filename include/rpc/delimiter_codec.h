@@ -8,6 +8,7 @@ namespace rpc {
             DelimiterCodec(std::string delimiter = "\nEND\n");
 
             std::string encodeRequest(const RpcRequest& req) override;
+            std::string encodeRequest(const std::string& payload) override;
 
             std::optional<RpcRequest> tryDecodeRequest(std::string& buffer) override;
 
