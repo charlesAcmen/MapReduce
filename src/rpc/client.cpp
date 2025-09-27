@@ -5,6 +5,7 @@
 #include <sys/socket.h> // send, recv
 #include <cstring>
 #include <sys/un.h>
+#include <spdlog/spdlog.h>
 RpcClient::RpcClient(const std::string& host, int port)
     : host(host), port(port),pool(1){
     // create socket used to connect to server
@@ -32,17 +33,20 @@ RpcClient::RpcClient(const std::string& host, int port)
     while (true) {
         // 使用 sizeof(addr) 通常没问题；也可以用更精确的长度：
         // socklen_t len = offsetof(struct sockaddr_un, sun_path) + strlen(addr.sun_path) + 1;
-        if (connect(sock_fd, (struct sockaddr*)&addr, sizeof(addr)) == 0) {break;} // success
+        spdlog::info("RpcClient connecting to {}:{}", host, port);
+        if (connect(sock_fd, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
+            spdlog::info("RpcClient connected to {}:{} at attempt {}", host, port, attempts + 1);
+            break;
+        } // success
         int e = errno;
         if (++attempts > max_retries) {
+            spdlog::error("RpcClient failed to connect to {}:{} after {} attempts: {}", host, port, attempts, strerror(e));
             close(sock_fd);
             throw std::runtime_error(std::string("connect() failed: ") + strerror(e));
         }
         // 常见错误：ENOENT (socket 文件不存在)、ECONNREFUSED 等 -> 等待并重试
         std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_ms));
     }
-
-    // sock_fd 已连接，可以复用做后续 call（注意并发安全）
 }
 RpcClient::~RpcClient(){
     if(sock_fd >= 0)

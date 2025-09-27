@@ -74,6 +74,7 @@ void RpcServer::start() {
             //continue to stay alive
             continue;
         }
+        spdlog::info("Accepted new connection: fd={}", client_fd);
         pool.enqueue([this, client_fd]() {
             char buf[4096];
             std::string data;

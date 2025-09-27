@@ -1,5 +1,5 @@
 #include "coordinator.h"
-
+#include "delimiter_codec.h"
 Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce) 
     : nReduce(nReduce),rpcServer(){
     for (int i = 0; i < (int)files.size(); i++) {
@@ -13,18 +13,21 @@ Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce)
             Task task{TaskType::None, -1, "", TaskState::Idle};
             if (this->getTask(task)) {
                 //serialize task to string
-                std::string s = std::to_string(static_cast<int>(task.type)) + "\n" +
+                // format: type\nid\nfilename\nstate\n
+                std::string s = to_string(task.type) + "\n" +
                                 std::to_string(task.id) + "\n" +
                                 task.filename + "\n" +
-                                std::to_string(static_cast<int>(task.state));
+                                to_string(task.state);
                 return s;
             } else {
                 return std::string("NoTask");
             }
         });
+    rpcServer.register_handler("ReportDone",
+        [this](const std::string &payload) {return "ok";});
 }
 /*
-scheule map tasks first, then reduce tasks
+schedule map tasks first, then reduce tasks
 just for simplicity
 */
 bool Coordinator::getTask(Task &task) {

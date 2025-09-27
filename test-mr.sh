@@ -17,7 +17,8 @@ make -j$(nproc)
 
 # Step 3: 启动 coordinator（前台运行）
 echo "Starting coordinator..."
-./coordinator
+#& means run in background,avoiding blocked by accept() in coordinator
+./coordinator &
 
 # Step 4: 启动几个 worker（后台运行）
 echo "Starting workers..."

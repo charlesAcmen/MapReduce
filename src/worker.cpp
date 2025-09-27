@@ -16,23 +16,18 @@ void Worker::run() {
     while (true) {
         Task task{TaskType::None, -1, "", TaskState::Idle};
         std::string reply = rpcClient.call("RequestTask", "");
-        rpc::DelimiterCodec codec;
-        auto resp = codec.tryDecodeResponse(reply);
-        if(resp){
-            std::istringstream iss(*resp);
-            int typeInt, stateInt;
-            if (!(iss >> typeInt >> task.id >> task.filename >> stateInt)) {
-                spdlog::error("Failed to parse task from response: {}", *resp);
-                continue;
-            }
-            task.type = static_cast<TaskType>(typeInt);
-            task.state = static_cast<TaskState>(stateInt);
-            spdlog::info("Received task: type={}, id={}, filename={}, state={}",
-                         static_cast<int>(task.type), task.id, task.filename, static_cast<int>(task.state));
-        }else{
-            spdlog::error("Response not complete");
+        spdlog::info("RPC reply: {}", reply);
+    
+        std::istringstream iss(reply);
+        int typeInt, stateInt;
+        if (!(iss >> typeInt >> task.id >> task.filename >> stateInt)) {
+            spdlog::error("Failed to parse task from response: {}", reply);
             continue;
         }
+        task.type = static_cast<TaskType>(typeInt);
+        task.state = static_cast<TaskState>(stateInt);
+        spdlog::info("Received task: type={}, id={}, filename={}, state={}",
+                        static_cast<int>(task.type), task.id, task.filename, static_cast<int>(task.state));
 
         if (task.type == TaskType::Map) {
             doMap(task);
