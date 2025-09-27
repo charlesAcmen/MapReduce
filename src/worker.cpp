@@ -17,17 +17,43 @@ void Worker::run() {
         Task task{TaskType::None, -1, "", TaskState::Idle};
         std::string reply = rpcClient.call("RequestTask", "");
         // spdlog::info("RPC reply: {}", reply);
-    
+        if (reply == "NoTask") {
+            spdlog::info("No more tasks available, worker {} exiting...", getpid());
+            break;
+        }
+
+
+
         std::istringstream iss(reply);
         std::string typeStr, stateStr;
-        if (!(iss >> typeStr >> task.id >> task.filename >> stateStr)) {
-            spdlog::error("Failed to parse task from response: {}", reply);
+        if (!(iss >> typeStr)) {
+            spdlog::error("Failed to parse task type: {}", reply);
             continue;
         }
+
+        if (typeStr == "NoTask") {
+            spdlog::info("No more tasks available, worker exiting...");
+            break;
+        } 
+
         task.type = taskTypeFromString(typeStr);
+
+        if (task.type == TaskType::Map) {
+            if (!(iss >> task.id >> task.filename >> stateStr)) {
+                spdlog::error("Failed to parse Map task: {}", reply);
+                continue;
+            }
+        } else if (task.type == TaskType::Reduce) {
+            if (!(iss >> task.id >> stateStr)) {
+                spdlog::error("Failed to parse Reduce task: {}", reply);
+                continue;
+            }
+            task.filename = ""; // Reduce tasks do not have filenames
+        }
+
         task.state = taskStateFromString(stateStr);
         spdlog::info("Received task: type={}, id={}, filename={}, state={}",
-                        to_string(task.type), task.id, task.filename, to_string(task.state));
+                    to_string(task.type), task.id, task.filename, to_string(task.state));
 
         if (task.type == TaskType::Map) {
             doMap(task);
@@ -44,9 +70,11 @@ void Worker::run() {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
+    spdlog::info("Worker exited run loop.");
 }
 
 void Worker::doMap(const Task &task) {
+    spdlog::info("Worker starting map task id={}, filename={}", task.id, task.filename);
     std::ifstream in("./data/" + task.filename);
     std::stringstream buffer;
     // Read entire file content
@@ -76,6 +104,7 @@ void Worker::doMap(const Task &task) {
 }
 
 void Worker::doReduce(const Task &task) {
+    spdlog::info("Worker starting reduce task id={}", task.id);
     // Aggregate intermediate key-value pairs
     std::map<std::string, std::vector<std::string>> kvMap;
     //directory_iterator iterates over files in the current directory

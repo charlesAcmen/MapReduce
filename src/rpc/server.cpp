@@ -7,8 +7,9 @@
 #include <iostream>
 #include <sstream>
 #include <spdlog/spdlog.h>
+#include <thread>
 #include "rpc/delimiter_codec.h"
-RpcServer::RpcServer(int port) : port(port),pool(1){}
+RpcServer::RpcServer(int port) : port(port){}
 void RpcServer::register_handler(
     const std::string& method,
     std::function<std::string(const std::string&)> handler) {
@@ -75,7 +76,10 @@ void RpcServer::start() {
             continue;
         }
         spdlog::info("Accepted new connection: fd={}", client_fd);
-        pool.enqueue([this, client_fd]() {
+        //do not enqueue here,because rpc client has long connection with rpc server
+        // pool.enqueue([this, client_fd]() {
+        //use detached thread instead
+        std::thread([this, client_fd]() {
             rpc::DelimiterCodec codec;
             char buf[4096];
             std::string data;
@@ -83,45 +87,50 @@ void RpcServer::start() {
             //recv parameters: socket fd, buffer, buffer size, flags
             //flags:0 means no special options
             //:: avoids potential c library function name conflicts with member functions
-            ssize_t n = ::recv(client_fd, buf, sizeof(buf), 0);
-            //rpc is once time request-response, so only recv once
-            if (n == 0) {
-                // client closed normally
-                spdlog::info("Client closed connection");
-                close(client_fd);
-                return;
-            } else if (n < 0) {
-                spdlog::error("recv failed: {}", strerror(errno));
-                close(client_fd);
-                return;
-            }
-            data.append(buf, n);
-
-            //now data should conform to the rpc message format defined in task.h
-            //[methodName]\n[payload]\nEND\n
-            //there could be multiple rpc messages in data
-            auto req_opt = codec.tryDecodeRequest(data);
-            //req_opt is std::optional<RpcRequest>
-            while (req_opt) {
-                const auto& [method, payload] = *req_opt;
-
-                // === call handler ===
-                std::string reply_payload;
-                spdlog::info("Received RPC request: method='{}', payload='{}'", method, payload);
-                if (handlers.count(method)) {
-                    reply_payload = handlers[method](payload);
-                } else {
-                    reply_payload = "ERROR: unknown method";
+            while(true){
+                ssize_t n = ::recv(client_fd, buf, sizeof(buf), 0);
+                //rpc is once time request-response, so only recv once
+                if (n == 0) {
+                    // client closed normally
+                    spdlog::info("Client closed connection");
+                    close(client_fd);
+                    return;
+                } else if (n < 0) {
+                    spdlog::error("recv failed: {}", strerror(errno));
+                    close(client_fd);
+                    return;
                 }
+                data.append(buf, n);
+                //now data should conform to the rpc message format defined in task.h
+                //[methodName]\n[payload]\nEND\n
+                //there could be multiple rpc messages in data
+                auto req_opt = codec.tryDecodeRequest(data);
+                //req_opt is std::optional<RpcRequest>
+                while (req_opt) {
+                    const auto& [method, payload] = *req_opt;
 
-                // === encode response ===
-                std::string framed = codec.encodeResponse(reply_payload);
-                ::send(client_fd, framed.data(), framed.size(), 0);
+                    // === call handler ===
+                    std::string reply_payload;
+                    spdlog::info("Received RPC request: method='{}', payload='{}'", method, payload);
+                    if (handlers.count(method)) {
+                        reply_payload = handlers[method](payload);
+                    } else {
+                        reply_payload = "ERROR: unknown method";
+                    }
 
-                // update opt
-                req_opt = codec.tryDecodeRequest(data);
+                    // === encode response ===
+                    std::string framed = codec.encodeResponse(reply_payload);
+                    // spdlog::info("Sending RPC response: {}'", framed);
+                    ::send(client_fd, framed.data(), framed.size(), 0);
+
+                    // update opt
+                    req_opt = codec.tryDecodeRequest(data);
+                }
+                //do not close until all messages are processed
             }
             close(client_fd);
-        });
+            spdlog::info("Closed connection: fd={}", client_fd);
+        // });
+        }).detach();
     }
 }

@@ -1,10 +1,13 @@
 #include "rpc/delimiter_codec.h"
 #include <sstream>
 #include <memory>
+#include <spdlog/spdlog.h>
 // protocol: [method]\n[payload]\nEND\n
 namespace rpc {
     DelimiterCodec::DelimiterCodec(std::string delimiter)
-        :delim(std::move(delimiter)) {}
+        :delim(std::move(delimiter)) {
+            // spdlog::info("DelimiterCodec initialized with delimiter='{}'", delim);
+        }
 
     std::string DelimiterCodec::encodeRequest(const RpcRequest& req){
         
@@ -28,28 +31,38 @@ namespace rpc {
     }
 
     std::optional<RpcRequest> DelimiterCodec::tryDecodeRequest(std::string& buffer){
+        // spdlog::info("buffer size: {}, content: '{}'", buffer.size(), buffer);
         size_t pos = buffer.find(delim);
         // no complete message yet
-        if (pos == std::string::npos) return std::nullopt;
-
+        if (pos == std::string::npos){
+            spdlog::info("No complete RPC request message yet");
+            return std::nullopt;
+        }
         // found a delimiter, extract the message
         std::string msg = buffer.substr(0, pos);
         // remove the processed message from buffer including the delimiter
         buffer.erase(0, pos + delim.size());
 
         std::istringstream iss(msg);
+        // 1️ resolve method
         std::string method;
         if (!std::getline(iss, method)) {
+            spdlog::error("Failed to parse method from RPC request: {}", msg);
             return std::nullopt;
         }
+        // 2️ resolve payload
         std::string payload;
+        // if there is more data, read until '\0'
+        // otherwise, payload is empty
+        if (iss.peek() != EOF) {
+            std::getline(iss, payload, '\0');
+        } else {
+            payload = "";
+        }
         //payload is the rest of the message until '\0'
         //from c++ 11 onwards,string data will be null-terminated
         //getline will stop at '\n' by default,so specify '\0' as the delimiter
         //and it may stop at the end of the stream if there is no '\0'
-        if(!getline(iss, payload, '\0')){
-            return std::nullopt;
-        }
 
         return RpcRequest{method, payload};
     }

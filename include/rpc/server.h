@@ -2,7 +2,7 @@
 #include <string>
 #include <functional>
 #include <unordered_map>
-#include "ThreadPool.h"
+// #include "ThreadPool.h"
 
 /*
 RPC response format is defined as:
@@ -22,5 +22,7 @@ private:
     //return type : std::string, param type: const std::string& as payload
     std::unordered_map<std::string, std::function<std::string(const std::string&)>> handlers;
 
-    ThreadPool pool;
+    //do not use thread pool here, because each rpc client has long connection with rpc server
+    //use detached thread instead
+    // ThreadPool pool;
 };

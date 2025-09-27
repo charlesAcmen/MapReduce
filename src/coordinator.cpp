@@ -22,6 +22,7 @@ Coordinator::Coordinator(const std::vector<std::string> &files, int nReduce)
                                 std::to_string(task.id) + "\n" +
                                 task.filename + "\n" +
                                 to_string(task.state);
+                
                 return s;
             } else {
                 return std::string("NoTask");
@@ -68,6 +69,7 @@ bool Coordinator::getTask(Task &task) {
     bool allMapDone = true;
     for (auto &t : mapTasks) if (t.state != TaskState::Completed) allMapDone = false;
     if (allMapDone) {
+        spdlog::info("All map tasks completed, now assigning reduce tasks");
         //then assign reduce tasks
         for (auto &t : reduceTasks) {
             if (t.state == TaskState::Idle) {
